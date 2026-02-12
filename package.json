@@ -1,0 +1,24 @@
+{
+  "name": "nodeapi",
+  "version": "1.0.0",
+  "description": "\"# nodeapi\"",
+  "main": "nodeapi.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node nodeapi.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/trishitha/nodeapi.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/trishitha/nodeapi/issues"
+  },
+  "homepage": "https://github.com/trishitha/nodeapi#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
