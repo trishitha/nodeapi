@@ -11,7 +11,7 @@
   <style>
     /* Basic reset and centered layout */
     html,body{height:100%;margin:0;font-family:Segoe UI,Arial,Helvetica,sans-serif}
-    .app{height:100%;display:flex;align-items:center;justify-content:center;background-image:url('images/BGWALLPAPER.jpeg');background-size:cover;background-position:center;background-attachment:fixed}
+    .app{height:100%;display:flex;align-items:center;justify-content:center;background-image:url('images/bgwallpaper5.jpg');background-size:cover;background-position:center;background-attachment:fixed}
     .frame{width:min(960px,95vw);height:min(720px,90vh);position:relative;overflow:hidden;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center}
 
     /* Stage containers - show/hide with opacity + transform for smooth transitions */
@@ -139,9 +139,16 @@
       line-height:1.1;
       color:#ff6fa5;
       /* soft pastel glow using text-shadow */
+      /* text stroke for modern browsers */
+      -webkit-text-stroke: 1.2px rgba(255,255,255,0.95);
+      /* fallback border using multiple shadows for broader support */
       text-shadow:
-        0 0 20px rgba(255,111,165,0.4),
-        0 0 40px rgba(255,111,165,0.2),
+        -1px -1px 0 rgba(255,255,255,0.95),
+        1px -1px 0 rgba(255,255,255,0.95),
+        -1px 1px 0 rgba(255,255,255,0.95),
+        1px 1px 0 rgba(255,255,255,0.95),
+        0 0 20px rgba(255,111,165,0.35),
+        0 0 40px rgba(255,111,165,0.18),
         0 2px 4px rgba(0,0,0,0.08);
       /* fade-in + scale cinematic animation */
       animation:fadeInScale .9s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
@@ -339,7 +346,28 @@
       let dropped = 0;
       let bouquetCompleted = false; // ensure completion sequence runs once
 
-      // Create 8 flowers (roses) with unique ids and random positions
+      // shared completion handler used by both pointer and native drop
+      function onFlowerDropped(){
+        dropped++;
+        if(dropped>=8 && !bouquetCompleted){
+          bouquetCompleted = true;
+          bouquet.src = 'images/fullbouquet2.jpeg';
+          bouquet.style.zIndex = 999;
+          bouquet.style.left = '50%';
+          bouquet.style.top = '50%';
+          bouquet.classList.add('start-small');
+          animateOnce(bouquet,'pop-zoom', ()=>{
+            bouquet.classList.remove('start-small');
+            bouquet.classList.add('zoom-long');
+            setTimeout(()=>{
+              bouquet.classList.remove('zoom-long');
+              animateOnce(bouquet,'fade-out', ()=>{ nextStage(2); });
+            }, 1000);
+          });
+        }
+      }
+
+      // Create 8 flowers (roses) with unique ids and fixed positions
       for(let i=0;i<8;i++){
         const f = document.createElement('img');
         f.src = 'images/flower.jpeg';
@@ -353,83 +381,82 @@
         const sat = (0.9 + Math.random()*0.5).toFixed(2);
         f.style.setProperty('--rot', rot);
         f.style.filter = `hue-rotate(${hue}) saturate(${sat})`;
+        // make absolutely positioned inside playArea so we can move on touch
+        f.style.position = 'absolute';
         // minor z-index variance for natural overlap
         f.style.zIndex = 10 + Math.floor(Math.random()*10);
         playArea.appendChild(f);
-        // handle drag visuals using a class so rotation is preserved
-        f.addEventListener('dragstart', (e)=>{
-          e.dataTransfer.setData('text/plain', f.id);
-          f.classList.add('dragging');
-        });
+
+        // desktop native drag handlers (keep for desktop)
+        f.addEventListener('dragstart', (e)=>{ e.dataTransfer.setData('text/plain', f.id); f.classList.add('dragging'); });
         f.addEventListener('dragend', ()=>f.classList.remove('dragging'));
+
+        // pointer-based dragging for touch / mobile devices
+        let dragging = false, pointerId = null, offsetX = 0, offsetY = 0;
+        f.addEventListener('pointerdown', (e)=>{
+          // only react to primary button/touch
+          if(e.button && e.button !== 0) return;
+          e.preventDefault();
+          dragging = true; pointerId = e.pointerId;
+          f.setPointerCapture(pointerId);
+          const r = f.getBoundingClientRect();
+          offsetX = e.clientX - r.left; offsetY = e.clientY - r.top;
+          f.classList.add('dragging');
+          f.style.zIndex = 9999;
+        });
+
+        document.addEventListener('pointermove', (e)=>{
+          if(!dragging || e.pointerId !== pointerId) return;
+          const areaRect = playArea.getBoundingClientRect();
+          let x = e.clientX - areaRect.left - offsetX;
+          let y = e.clientY - areaRect.top - offsetY;
+          const w = f.offsetWidth, h = f.offsetHeight;
+          x = Math.max(8, Math.min(areaRect.width - w - 8, Math.round(x)));
+          y = Math.max(8, Math.min(areaRect.height - h - 8, Math.round(y)));
+          f.style.left = x + 'px'; f.style.top = y + 'px';
+        });
+
+        document.addEventListener('pointerup', (e)=>{
+          if(!dragging || e.pointerId !== pointerId) return;
+          dragging = false;
+          try{ f.releasePointerCapture(pointerId); }catch(err){}
+          f.classList.remove('dragging');
+          f.style.zIndex = 10 + Math.floor(Math.random()*10);
+          // check if pointer is over bouquet -> treat as drop
+          const bRect = bouquet.getBoundingClientRect();
+          if(e.clientX >= bRect.left && e.clientX <= bRect.right && e.clientY >= bRect.top && e.clientY <= bRect.bottom){
+            if(f && f.parentNode){ f.parentNode.removeChild(f); onFlowerDropped(); }
+          }
+        });
       }
 
       // Position flowers once layout settled
-      // Use 8 fixed distinct positions (percent-based) so each rose stays at its own location
       function positionFlowers(){
         const areaRect = playArea.getBoundingClientRect();
         const flowers = Array.from(document.querySelectorAll('.flower'));
-        // percent positions (x%, y%) for 8 distinct spots around the play area
         const positions = [
-          [0.12, 0.12], // top-left
-          [0.5, 0.10],  // top-center
-          [0.88, 0.12], // top-right
-          [0.12, 0.5],  // middle-left
-          [0.88, 0.5],  // middle-right
-          [0.12, 0.86], // bottom-left
-          [0.5, 0.86],  // bottom-center
-          [0.88, 0.86]  // bottom-right
+          [0.12, 0.12],[0.5, 0.10],[0.88, 0.12],[0.12, 0.5],[0.88, 0.5],[0.12, 0.86],[0.5, 0.86],[0.88, 0.86]
         ];
-
         flowers.forEach((f, idx)=>{
           const w = f.offsetWidth || 72, h = f.offsetHeight || 72;
           const pos = positions[idx % positions.length];
           const x = Math.max(8, Math.min(areaRect.width - w - 8, Math.round(areaRect.width * pos[0] - w/2)));
           const y = Math.max(8, Math.min(areaRect.height - h - 8, Math.round(areaRect.height * pos[1] - h/2)));
-          f.style.left = x + 'px';
-          f.style.top = y + 'px';
+          f.style.left = x + 'px'; f.style.top = y + 'px';
         });
       }
 
-      // bouquet: accept drops
+      // bouquet: accept drops (native desktop)
       bouquet.addEventListener('dragover', (e)=>{ e.preventDefault(); });
       bouquet.addEventListener('drop', (e)=>{
         e.preventDefault();
         const id = e.dataTransfer.getData('text/plain');
         const f = document.getElementById(id);
-        if(f && f.parentNode){
-          f.parentNode.removeChild(f);
-          dropped++;
-        }
-        // when all dropped, replace bouquet and animate, then show completed bouquet with 5s zoom then fade into next game
-        if(dropped>=8 && !bouquetCompleted){
-          bouquetCompleted = true;
-          bouquet.src = 'images/fullbouquet2.jpeg';
-          bouquet.style.zIndex = 999;
-          // ensure bouquet is centered and starts a bit smaller so pop is visible
-          bouquet.style.left = '50%';
-          bouquet.style.top = '50%';
-          bouquet.classList.add('start-small');
-          // coming-in pop animation, then perform long 5s zoom (via CSS transition), then fade into next stage
-          animateOnce(bouquet,'pop-zoom', ()=>{
-            // remove the small start so pop finishes at normal scale, then start long zoom
-            bouquet.classList.remove('start-small');
-            // start long zoom by adding CSS class that transitions transform over 5s
-            bouquet.classList.add('zoom-long');
-            // after 5s of zoom, remove zoom and fade out, then proceed
-            setTimeout(()=>{
-              bouquet.classList.remove('zoom-long');
-              animateOnce(bouquet,'fade-out', ()=>{
-                nextStage(2);
-              });
-            }, 1000);
-          });
-        }
+        if(f && f.parentNode){ f.parentNode.removeChild(f); onFlowerDropped(); }
       });
 
       // position after short delay so sizes available
       window.addEventListener('load', positionFlowers);
-      // also reposition when frame resizes
       window.addEventListener('resize', ()=>setTimeout(positionFlowers,100));
     })();
 
