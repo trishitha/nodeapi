@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Be My Valentine 💖</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      font-family: Arial, sans-serif;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin: 20px 0;
+      color: #fff;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 10px;
+      transition: 0.3s ease;
+    }
+
+    .yes {
+      background-color: #22c55e;
+      color: white;
+    }
+
+    .no {
+      background-color: #ef4444;
+      color: white;
+    }
+
+    .result {
+      font-size: 40px;
+      font-weight: bold;
+      color: white;
+      margin-top: 20px;
+    }
+
+    img {
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <img src="https://gifdb.com/images/high/cute-love-bear-roses-ou7zho5oosxnpo6k.gif" />
+    <h1>Will you be my Valentine?</h1>
+    <div>
+      <button id="yesBtn" class="yes">Yes</button>
+      <button id="noBtn" class="no">No</button>
+    </div>
+  </div>
+
+  <script>
+    let noCount = 0;
+    let yesPressed = false;
+
+    const phrases = [
+      "No",
+      "Are you sure?",
+      "Really sure?",
+      "Think again!",
+      "Last chance!",
+      "Surely not?",
+      "You might regret this!",
+      "Give it another thought!",
+      "Are you absolutely certain?",
+      "This could be a mistake!",
+      "Have a heart!",
+      "Don't be so cold!",
+      "Change of heart?",
+      "Wouldn't you reconsider?",
+      "Is that your final answer?",
+      "You're breaking my heart ;("
+    ];
+
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const app = document.getElementById("app");
+
+    yesBtn.addEventListener("click", () => {
+      app.innerHTML = `
+        <img src="https://media.tenor.com/gUiu1zyxfzYAAAAi/bear-kiss-bear-kisses.gif" />
+        <div class="result">Ok yay!!! 💖</div>
+      `;
+    });
+
+    noBtn.addEventListener("click", () => {
+      noCount++;
+      noBtn.innerText = phrases[Math.min(noCount, phrases.length - 1)];
+      yesBtn.style.fontSize = (16 + noCount * 6) + "px";
+    });
+  </script>
+</body>
+</html>
