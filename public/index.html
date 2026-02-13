@@ -4,10 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>4-Stage Interactive Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
   <style>
     /* Basic reset and centered layout */
     html,body{height:100%;margin:0;font-family:Segoe UI,Arial,Helvetica,sans-serif}
-    .app{height:100%;display:flex;align-items:center;justify-content:center;background:#fff}
+    .app{height:100%;display:flex;align-items:center;justify-content:center;background-image:url('images/BGWALLPAPER.jpeg');background-size:cover;background-position:center;background-attachment:fixed}
     .frame{width:min(960px,95vw);height:min(720px,90vh);position:relative;overflow:hidden;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center}
 
     /* Stage containers - show/hide with opacity + transform for smooth transitions */
@@ -15,11 +19,11 @@
     .stage.active{opacity:1;pointer-events:auto;transform:scale(1)}
 
     /* Background per stage */
-    #stage0{background:#ffffff}
-    #stage1{background:#ffffff}
-    #stage2{background:linear-gradient(120deg,#ffeedd,#ffd1ea);background-size:cover}
-    #stage3{background:#ffffff}
-    #stage4{background:#fff6f8}
+    #stage0{background-image:url('images/meow.jpeg');background-size:cover;background-position:center}
+    #stage1{background-image:url('images/flowerwallpaper.png');background-size:cover;background-position:center}
+    #stage2{background-image:url('images/fruit_wallpaper.jpeg');background-size:cover;background-position:center}
+    #stage3{background-image:url('images/camera.jpg');background-size:cover;background-position:center}
+    #stage4{background-image:url('images/lastwallpaper.jpeg');background-size:cover;background-position:center}
 
     /* Buttons */
     .btn{padding:10px 18px;border-radius:8px;border:0;background:#ff6b6b;color:#fff;cursor:pointer;margin:6px;font-size:16px}
@@ -32,16 +36,41 @@
     /* allow per-flower rotation via CSS variable and a dragging scale class */
     .flower{transform:rotate(var(--rot,0deg))}
     .flower.dragging{transform:rotate(var(--rot,0deg)) scale(.95)}
-    .bouquet{width:220px;height:220px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:12px}
+    .bouquet{width:220px;height:220px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(1);border-radius:12px;transition:transform 5s cubic-bezier(.2,.9,.28,1);z-index:50}
+    .bouquet.zoom-long{transform:translate(-50%,-50%) scale(1.35)}
+    .bouquet.start-small{transform:translate(-50%,-50%) scale(.7);opacity:1}
 
     /* MCQ styling */
     .mcq{display:flex;flex-direction:column;align-items:center;gap:12px}
     .options{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
-    .option{padding:10px 14px;border-radius:8px;border:2px solid #fff;background:rgba(255,255,255,.85);cursor:pointer;min-width:120px;text-align:center}
+    .option{padding:10px 14px;border-radius:8px;border:2px solid rgba(255,255,255,.6);cursor:pointer;min-width:120px;text-align:center;color:#fff;font-weight:600}
+    /* option color mapping */
+    .option[data-answer="a"]{background:#c19a00;border-color:#a67c00;color:#2b1f00} /* mustard yellow for Banana */
+    .option[data-answer="b"]{background:#2ecc71;border-color:#27ae60;color:#053009} /* kiwi green */
+    .option[data-answer="c"]{background:#e74c3c;border-color:#c0392b;color:#fff} /* strawberry red */
+    .option[data-answer="d"]{background:#ffd400;border-color:#ffbf00;color:#2b1700} /* bright yellow pineapple */
 
     /* Canvas container */
     .canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
-    canvas{background:#fff;border:2px dashed #ddd;border-radius:8px;touch-action:none}
+    /* Canvas frame wrapper */
+    .canvas-frame{
+      padding:16px;
+      border:8px solid #d4af37;
+      border-radius:12px;
+      background:linear-gradient(to bottom, #f5e6d3, #e8d8c8);
+      box-shadow:0 8px 20px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+    /* Canvas styling */
+    #drawCanvas{
+      width:clamp(300px,80vw,600px);
+      height:clamp(250px,60vh,450px);
+      border:2px solid rgba(0,0,0,0.1);
+      border-radius:8px;
+      background:#fff;
+      cursor:crosshair;
+      touch-action:none;
+      display:block;
+    }
 
     /* Final text */
     .final-text{font-size:38px;font-weight:700;color:#ff4d6d;text-align:center}
@@ -57,9 +86,141 @@
     /* helper */
     .hidden{display:none}
     .centered{display:flex;flex-direction:column;align-items:center}
+    /* Decorative scalloped sticker for final message */
+    .sticker{
+      --bg1:#ffd6ea;
+      --bg2:#e9d6ff;
+      --scallop:#ffe6f0;
+      display:inline-block;
+      padding:clamp(12px,2.5vw,22px) clamp(20px,4vw,40px);
+      color:#fff;
+      font-weight:800;
+      font-size:clamp(20px,3.5vw,40px);
+      line-height:1;
+      text-align:center;
+      border-radius:32px;
+      background:linear-gradient(135deg,var(--bg1),var(--bg2));
+      position:relative;
+      box-shadow:0 8px 20px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06) inset;
+      z-index:200;
+      transform-origin:center;
+      transition:transform .25s ease, opacity .6s ease;
+      will-change:transform,opacity;
+      /* gentle float */
+      animation:floaty 4s ease-in-out infinite;
+    }
+    @keyframes floaty{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+    /* scalloped bumps using repeating radial gradient pseudo-elements */
+    .sticker::before,
+    .sticker::after{
+      content:'';
+      position:absolute;
+      left:50%;transform:translateX(-50%);
+      width:calc(100% + 48px);
+      height:40px;
+      background:radial-gradient(circle at 20px 20px,var(--scallop) 18px, transparent 19px);
+      background-size:40px 40px;
+      pointer-events:none;
+    }
+    .sticker::before{top:-20px;border-bottom-left-radius:20px;border-bottom-right-radius:20px}
+    .sticker::after{bottom:-20px;transform:translateX(-50%) rotate(180deg);border-top-left-radius:20px;border-top-right-radius:20px}
+    /* subtle pop when added */
+    .sticker.pop-enter{animation:stickerPop .5s cubic-bezier(.2,.9,.28,1)}
+    @keyframes stickerPop{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
+    /* Camera heading - elegant serif cinematic style */
+    .camera-heading{
+      font-family:'Playfair Display',serif;
+      font-size:clamp(16px,4vw,36px);
+      font-weight:800;
+      letter-spacing:0.8px;
+      text-align:center;
+      margin:0 0 20px 0;
+      padding:0 16px;
+      line-height:1.1;
+      color:#ff6fa5;
+      /* soft pastel glow using text-shadow */
+      text-shadow:
+        0 0 20px rgba(255,111,165,0.4),
+        0 0 40px rgba(255,111,165,0.2),
+        0 2px 4px rgba(0,0,0,0.08);
+      /* fade-in + scale cinematic animation */
+      animation:fadeInScale .9s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
+      /* responsive spacing */
+      margin-top:clamp(30px,8vw,60px);
+      margin-bottom:clamp(18px,4vw,28px);
+    }
+    @keyframes fadeInScale{
+      0%{opacity:0;transform:scale(0.92)}
+      100%{opacity:1;transform:scale(1)}
+    }
+    /* Typing effect for final stage */
+    .typing{
+      font-family:'Fredoka One', 'Playfair Display', serif;
+      font-size:clamp(20px,4vw,48px);
+      color:#ff5178;
+      display:inline-block;
+      white-space:nowrap;
+      overflow:hidden;
+      border-right:.12em solid rgba(255,255,255,0.9);
+      width:0ch;
+      text-align:center;
+    }
+    #stage4.active .typing{
+      animation: typing 3s steps(16,end) forwards, blink .75s step-end infinite 3s;
+    }
+    @keyframes typing{from{width:0ch}to{width:16ch}}
+    @keyframes blink{50%{border-color:transparent}}
+    /* Fullscreen video intro overlay */
+    #videoIntro{
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:#000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:1000;
+      opacity:1;
+      transition:opacity 0.5s ease;
+    }
+    #videoIntro.hidden{
+      opacity:0;
+      pointer-events:none;
+    }
+    #videoIntro video{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+    }
+    /* Welcome text over the intro video */
+    .video-welcome{
+      position:absolute;
+      top:18%;
+      left:50%;
+      transform:translateX(-50%);
+      z-index:1011;
+      font-family:'Fredoka One',sans-serif;
+      color:#fff;
+      font-size:clamp(28px,8vw,84px);
+      text-align:center;
+      text-shadow:0 6px 20px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.35);
+      pointer-events:none;
+      animation:popZoom .9s cubic-bezier(.2,.9,.28,1) both;
+    }
+
   </style>
 </head>
 <body>
+  <!-- Fullscreen video intro -->
+  <div id="videoIntro">
+    <video id="introVideo" autoplay muted playsinline>
+      <source src="video/Bongo_Cat_720P.mp4" type="video/mp4">
+    </video>
+    <div class="video-welcome">Welcome!!!</div>
+  </div>
+
   <div class="app">
     <div class="frame" id="gameFrame">
 
@@ -75,6 +236,7 @@
 
       <!-- STAGE 1: FLOWER DRAG GAME -->
       <section id="stage1" class="stage">
+        <h3 style="margin-top:6px">Drag the flower into the bouquet</h3>
         <div class="play-area" id="playArea">
           <!-- Bouquet drop target -->
           <img id="bouquet" class="bouquet" src="images/bouquet.jpeg" alt="bouquet" draggable="false"/>
@@ -100,9 +262,11 @@
       <!-- STAGE 3: DRAWING GAME -->
       <section id="stage3" class="stage">
         <div class="canvas-wrap centered">
-          <p>Draw a smiley face and press Submit</p>
-          <canvas id="drawCanvas" width="600" height="400"></canvas>
-          <div>
+          <h2 class="camera-heading">Smile for the Camera 📷</h2>
+          <div class="canvas-frame">
+            <canvas id="drawCanvas"></canvas>
+          </div>
+          <div style="margin-top:20px">
             <button class="btn" id="submitDraw">Submit</button>
             <button class="btn secondary" id="clearDraw">Clear</button>
           </div>
@@ -112,14 +276,33 @@
       <!-- STAGE 4: FINAL -->
       <section id="stage4" class="stage">
         <img id="finalImg" src="images/kunalandtrishita.png" alt="final" style="max-width:70%;border-radius:10px"/>
-        <div id="finalText" class="final-text" style="opacity:0;transition:opacity 1s ease;margin-top:20px;display:none">Happy Valentine's Day baby</div>
+          <div style="margin-top:12px;text-align:center">
+            <div class="typing">I love you ❤️</div>
+          </div>
+          <div id="finalText" style="opacity:0;transition:opacity 1s ease;margin-top:20px;display:none">
+            <div id="stickerMsg" class="sticker">Happy Valentine's Day</div>
+          </div>
       </section>
 
     </div>
   </div>
 
   <script>
-    /* Major sections: Stage management, Stage1 drag-drop, Stage2 MCQ, Stage3 canvas drawing, Stage4 finale */
+    /* Major sections: Video intro, Stage management, Stage1 drag-drop, Stage2 MCQ, Stage3 canvas drawing, Stage4 finale */
+
+    // ------------------ Fullscreen video intro ------------------
+    (function setupVideoIntro(){
+      const videoIntro = document.getElementById('videoIntro');
+      const introVideo = document.getElementById('introVideo');
+      
+      // When video ends or user clicks, hide overlay and reveal game
+      function hideVideo(){
+        videoIntro.classList.add('hidden');
+      }
+      
+      introVideo.addEventListener('ended', hideVideo);
+      videoIntro.addEventListener('click', hideVideo);
+    })();
 
     // ------------------ Stage switching ------------------
     function nextStage(n){
@@ -154,6 +337,7 @@
       const playArea = document.getElementById('playArea');
       const bouquet = document.getElementById('bouquet');
       let dropped = 0;
+      let bouquetCompleted = false; // ensure completion sequence runs once
 
       // Create 8 flowers (roses) with unique ids and random positions
       for(let i=0;i<8;i++){
@@ -217,15 +401,29 @@
           f.parentNode.removeChild(f);
           dropped++;
         }
-        // when all dropped, replace bouquet and animate, then go to next stage
-        if(dropped>=8){
-          bouquet.src = 'images/fullbouquet.jpeg';
-          // ensure animation only once
-          if(!bouquet.classList.contains('pop-zoom')){
-            animateOnce(bouquet,'pop-zoom', ()=>{
-              nextStage(2);
-            });
-          }
+        // when all dropped, replace bouquet and animate, then show completed bouquet with 5s zoom then fade into next game
+        if(dropped>=8 && !bouquetCompleted){
+          bouquetCompleted = true;
+          bouquet.src = 'images/fullbouquet2.jpeg';
+          bouquet.style.zIndex = 999;
+          // ensure bouquet is centered and starts a bit smaller so pop is visible
+          bouquet.style.left = '50%';
+          bouquet.style.top = '50%';
+          bouquet.classList.add('start-small');
+          // coming-in pop animation, then perform long 5s zoom (via CSS transition), then fade into next stage
+          animateOnce(bouquet,'pop-zoom', ()=>{
+            // remove the small start so pop finishes at normal scale, then start long zoom
+            bouquet.classList.remove('start-small');
+            // start long zoom by adding CSS class that transitions transform over 5s
+            bouquet.classList.add('zoom-long');
+            // after 5s of zoom, remove zoom and fade out, then proceed
+            setTimeout(()=>{
+              bouquet.classList.remove('zoom-long');
+              animateOnce(bouquet,'fade-out', ()=>{
+                nextStage(2);
+              });
+            }, 1000);
+          });
         }
       });
 
@@ -266,7 +464,19 @@
       const canvas = document.getElementById('drawCanvas');
       const ctx = canvas.getContext('2d');
       let drawing=false; let lastPos=null;
-      ctx.lineWidth = 6; ctx.lineCap='round'; ctx.strokeStyle = '#ff6b6b';
+      
+      // Set canvas resolution based on CSS size with DPI awareness
+      function resizeCanvas(){
+        const rect = canvas.getBoundingClientRect();
+        const scale = window.devicePixelRatio || 1;
+        canvas.width = rect.width * scale;
+        canvas.height = rect.height * scale;
+        ctx.scale(scale, scale);
+        ctx.lineWidth = 6; ctx.lineCap='round'; ctx.strokeStyle = '#ff6b6b';
+      }
+      
+      window.addEventListener('load', resizeCanvas);
+      window.addEventListener('resize', ()=>{ ctx.clearRect(0, 0, canvas.width, canvas.height); resizeCanvas(); });
 
       function getPos(e){
         const r = canvas.getBoundingClientRect();
@@ -308,8 +518,17 @@
                 // after fade completes (~1s) show text
                 setTimeout(()=>{
                   img.style.display='none';
-                  text.style.display='block';
-                  setTimeout(()=>text.style.opacity=1,20);
+                    // remove the typing message once image is gone
+                    const typing = document.querySelector('#stage4 .typing');
+                    if(typing && typing.parentNode) typing.parentNode.removeChild(typing);
+                    text.style.display='block';
+                    // animate sticker pop entry
+                    const sticker = document.getElementById('stickerMsg');
+                    if(sticker){
+                      sticker.classList.add('pop-enter');
+                      sticker.addEventListener('animationend', ()=>sticker.classList.remove('pop-enter'), {once:true});
+                    }
+                    setTimeout(()=>text.style.opacity=1,20);
                 },1000);
               },3000);
             }
