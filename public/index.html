@@ -1,113 +1,318 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>Be My Valentine 💖</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>4-Stage Interactive Game</title>
   <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
-      font-family: Arial, sans-serif;
-      text-align: center;
-      overflow: hidden;
-    }
+    /* Basic reset and centered layout */
+    html,body{height:100%;margin:0;font-family:Segoe UI,Arial,Helvetica,sans-serif}
+    .app{height:100%;display:flex;align-items:center;justify-content:center;background:#fff}
+    .frame{width:min(960px,95vw);height:min(720px,90vh);position:relative;overflow:hidden;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center}
 
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+    /* Stage containers - show/hide with opacity + transform for smooth transitions */
+    .stage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;transition:opacity .45s ease, transform .45s ease;opacity:0;pointer-events:none;transform:scale(.98)}
+    .stage.active{opacity:1;pointer-events:auto;transform:scale(1)}
 
-    h1 {
-      font-size: 36px;
-      margin: 20px 0;
-      color: #fff;
-    }
+    /* Background per stage */
+    #stage0{background:#ffffff}
+    #stage1{background:#ffffff}
+    #stage2{background:linear-gradient(120deg,#ffeedd,#ffd1ea);background-size:cover}
+    #stage3{background:#ffffff}
+    #stage4{background:#fff6f8}
 
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      margin: 10px;
-      transition: 0.3s ease;
-    }
+    /* Buttons */
+    .btn{padding:10px 18px;border-radius:8px;border:0;background:#ff6b6b;color:#fff;cursor:pointer;margin:6px;font-size:16px}
+    .btn.secondary{background:#4d8cff}
 
-    .yes {
-      background-color: #22c55e;
-      color: white;
-    }
+    /* Stage 1 layout: flowers absolute positioned */
+    .play-area{position:relative;flex:1;width:100%;height:100%;display:block}
+    .flower{width:72px;height:72px;position:absolute;user-select:none;cursor:grab;transition:transform .2s ease}
+    .flower:active{cursor:grabbing}
+    .bouquet{width:220px;height:220px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:12px}
 
-    .no {
-      background-color: #ef4444;
-      color: white;
-    }
+    /* MCQ styling */
+    .mcq{display:flex;flex-direction:column;align-items:center;gap:12px}
+    .options{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+    .option{padding:10px 14px;border-radius:8px;border:2px solid #fff;background:rgba(255,255,255,.85);cursor:pointer;min-width:120px;text-align:center}
 
-    .result {
-      font-size: 40px;
-      font-weight: bold;
-      color: white;
-      margin-top: 20px;
-    }
+    /* Canvas container */
+    .canvas-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+    canvas{background:#fff;border:2px dashed #ddd;border-radius:8px;touch-action:none}
 
-    img {
-      height: 200px;
-    }
+    /* Final text */
+    .final-text{font-size:38px;font-weight:700;color:#ff4d6d;text-align:center}
+
+    /* Animations - expand and pop */
+    @keyframes popZoom{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
+    .pop-zoom{animation:popZoom .6s cubic-bezier(.2,.9,.28,1) forwards}
+
+    /* Fade-out */
+    .fade-out{animation:fadeOut 1s ease forwards}
+    @keyframes fadeOut{to{opacity:0;transform:scale(.98)}}
+
+    /* helper */
+    .hidden{display:none}
+    .centered{display:flex;flex-direction:column;align-items:center}
   </style>
 </head>
 <body>
-  <div class="container" id="app">
-    <img src="https://gifdb.com/images/high/cute-love-bear-roses-ou7zho5oosxnpo6k.gif" />
-    <h1>Will you be my Valentine?</h1>
-    <div>
-      <button id="yesBtn" class="yes">Yes</button>
-      <button id="noBtn" class="no">No</button>
+  <div class="app">
+    <div class="frame" id="gameFrame">
+
+      <!-- STAGE 0: INTRO -->
+      <section id="stage0" class="stage active">
+        <img src="images/coolnalandtrishita.jpeg" alt="intro" style="max-width:45%;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.12)"/>
+        <h2>Do you want to play this game?</h2>
+        <div>
+          <button class="btn" id="yesBtn">Yes</button>
+          <button class="btn secondary" id="noBtn">No</button>
+        </div>
+      </section>
+
+      <!-- STAGE 1: FLOWER DRAG GAME -->
+      <section id="stage1" class="stage">
+        <div class="play-area" id="playArea">
+          <!-- Bouquet drop target -->
+          <img id="bouquet" class="bouquet" src="images/bouquet.jpeg" alt="bouquet" draggable="false"/>
+        </div>
+      </section>
+
+      <!-- STAGE 2: MCQ QUIZ -->
+      <section id="stage2" class="stage">
+        <div class="mcq centered">
+          <img id="happyGif" src="images/happy.gif" alt="happy" style="width:140px;display:none"/>
+          <h3>Choose the correct statement. What is Trishita's favourite fruit?</h3>
+          <div class="options">
+            <div class="option" data-answer="a">a. Banana</div>
+            <div class="option" data-answer="b">b. Kiwi</div>
+            <div class="option" data-answer="c">c. Strawberry</div>
+            <div class="option" data-answer="d">d. Pineapple</div>
+          </div>
+          <div id="tryAgain" style="color:#ff3b3b;margin-top:8px;display:none">Try again</div>
+          <img id="cryGif" src="images/crying.gif" alt="cry" style="width:100px;display:none;margin-top:8px"/>
+        </div>
+      </section>
+
+      <!-- STAGE 3: DRAWING GAME -->
+      <section id="stage3" class="stage">
+        <div class="canvas-wrap centered">
+          <p>Draw a smiley face and press Submit</p>
+          <canvas id="drawCanvas" width="600" height="400"></canvas>
+          <div>
+            <button class="btn" id="submitDraw">Submit</button>
+            <button class="btn secondary" id="clearDraw">Clear</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STAGE 4: FINAL -->
+      <section id="stage4" class="stage">
+        <img id="finalImg" src="images/kunalandtrishita.png" alt="final" style="max-width:70%;border-radius:10px"/>
+        <div id="finalText" class="final-text" style="opacity:0;transition:opacity 1s ease;margin-top:20px;display:none">Happy Valentine's Day baby</div>
+      </section>
+
     </div>
   </div>
 
   <script>
-    let noCount = 0;
-    let yesPressed = false;
+    /* Major sections: Stage management, Stage1 drag-drop, Stage2 MCQ, Stage3 canvas drawing, Stage4 finale */
 
-    const phrases = [
-      "No",
-      "Are you sure?",
-      "Really sure?",
-      "Think again!",
-      "Last chance!",
-      "Surely not?",
-      "You might regret this!",
-      "Give it another thought!",
-      "Are you absolutely certain?",
-      "This could be a mistake!",
-      "Have a heart!",
-      "Don't be so cold!",
-      "Change of heart?",
-      "Wouldn't you reconsider?",
-      "Is that your final answer?",
-      "You're breaking my heart ;("
-    ];
+    // ------------------ Stage switching ------------------
+    function nextStage(n){
+      const total = 5; // 0..4
+      for(let i=0;i<total;i++){
+        const el = document.getElementById('stage'+i);
+        if(!el) continue;
+        if(i===n) el.classList.add('active'); else el.classList.remove('active');
+      }
+    }
 
-    const yesBtn = document.getElementById("yesBtn");
-    const noBtn = document.getElementById("noBtn");
-    const app = document.getElementById("app");
+    // Helper to add animation class and call callback after animation ends (once)
+    function animateOnce(el, cls, cb){
+      function onEnd(e){
+        el.removeEventListener('animationend', onEnd);
+        cb && cb();
+      }
+      el.addEventListener('animationend', onEnd);
+      el.classList.add(cls);
+    }
 
-    yesBtn.addEventListener("click", () => {
-      app.innerHTML = `
-        <img src="https://media.tenor.com/gUiu1zyxfzYAAAAi/bear-kiss-bear-kisses.gif" />
-        <div class="result">Ok yay!!! 💖</div>
-      `;
+    // ------------------ Stage 0: Intro handlers ------------------
+    document.getElementById('yesBtn').addEventListener('click', ()=>nextStage(1));
+    document.getElementById('noBtn').addEventListener('click', ()=>{
+      alert("You don't have an option.");
+      // continue automatically to Stage 1
+      nextStage(1);
     });
 
-    noBtn.addEventListener("click", () => {
-      noCount++;
-      noBtn.innerText = phrases[Math.min(noCount, phrases.length - 1)];
-      yesBtn.style.fontSize = (16 + noCount * 6) + "px";
+    // ------------------ Stage 1: Flower drag & drop ------------------
+    (function setupStage1(){
+      const playArea = document.getElementById('playArea');
+      const bouquet = document.getElementById('bouquet');
+      let dropped = 0;
+
+      // Create 8 flowers with unique ids and random positions
+      for(let i=0;i<8;i++){
+        const f = document.createElement('img');
+        f.src = 'images/flower.jpeg';
+        f.className = 'flower';
+        f.id = 'flower'+i;
+        f.draggable = true;
+        // random position within playArea bounds (leave room for bouquet center)
+        const pad = 40;
+        const w = 72, h = 72;
+        // compute bounding box for random placement avoiding centered area
+        const rect = {w: playArea.clientWidth || 900, h: playArea.clientHeight || 600};
+        // We'll position after app is visible (small timeout) to get real sizes
+        playArea.appendChild(f);
+        f.addEventListener('dragstart', (e)=>{
+          e.dataTransfer.setData('text/plain', f.id);
+          requestAnimationFrame(()=>f.style.transform='scale(.95)');
+        });
+        f.addEventListener('dragend', ()=>f.style.transform='');
+      }
+
+      // Position flowers once layout settled
+      function positionFlowers(){
+        const areaRect = playArea.getBoundingClientRect();
+        const center = {x: areaRect.left + areaRect.width/2, y: areaRect.top + areaRect.height/2};
+        const exclusionRadius = Math.min(areaRect.width, areaRect.height) * 0.22;
+        document.querySelectorAll('.flower').forEach((f,idx)=>{
+          const w = f.offsetWidth || 72, h = f.offsetHeight || 72;
+          let x,y,tries=0;
+          do{
+            x = Math.random() * (areaRect.width - w);
+            y = Math.random() * (areaRect.height - h);
+            const cx = areaRect.left + x + w/2, cy = areaRect.top + y + h/2;
+            const dx = cx - center.x, dy = cy - center.y;
+            tries++;
+            if(tries>200) break;
+          }while(Math.hypot(dx,dy) < exclusionRadius); // avoid center bouquet
+          f.style.left = x + 'px';
+          f.style.top = y + 'px';
+        });
+      }
+
+      // bouquet: accept drops
+      bouquet.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+      bouquet.addEventListener('drop', (e)=>{
+        e.preventDefault();
+        const id = e.dataTransfer.getData('text/plain');
+        const f = document.getElementById(id);
+        if(f && f.parentNode){
+          f.parentNode.removeChild(f);
+          dropped++;
+        }
+        // when all dropped, replace bouquet and animate, then go to next stage
+        if(dropped>=8){
+          bouquet.src = 'images/fullbouquet.jpeg';
+          // ensure animation only once
+          if(!bouquet.classList.contains('pop-zoom')){
+            animateOnce(bouquet,'pop-zoom', ()=>{
+              nextStage(2);
+            });
+          }
+        }
+      });
+
+      // position after short delay so sizes available
+      window.addEventListener('load', positionFlowers);
+      // also reposition when frame resizes
+      window.addEventListener('resize', ()=>setTimeout(positionFlowers,100));
+    })();
+
+    // ------------------ Stage 2: MCQ quiz ------------------
+    (function setupStage2(){
+      const options = document.querySelectorAll('#stage2 .option');
+      const tryAgain = document.getElementById('tryAgain');
+      const cryGif = document.getElementById('cryGif');
+      const happyGif = document.getElementById('happyGif');
+      options.forEach(opt=>{
+        opt.addEventListener('click', ()=>{
+          const ans = opt.getAttribute('data-answer');
+          if(ans==='d'){
+            // correct
+            tryAgain.style.display='none'; cryGif.style.display='none';
+            happyGif.style.display='block';
+            // animate once, then next stage
+            if(!happyGif.classList.contains('pop-zoom')){
+              animateOnce(happyGif,'pop-zoom', ()=>{
+                setTimeout(()=>nextStage(3),200);
+              });
+            }
+          } else {
+            tryAgain.style.display='block'; cryGif.style.display='block';
+          }
+        });
+      });
+    })();
+
+    // ------------------ Stage 3: Drawing game ------------------
+    (function setupStage3(){
+      const canvas = document.getElementById('drawCanvas');
+      const ctx = canvas.getContext('2d');
+      let drawing=false; let lastPos=null;
+      ctx.lineWidth = 6; ctx.lineCap='round'; ctx.strokeStyle = '#ff6b6b';
+
+      function getPos(e){
+        const r = canvas.getBoundingClientRect();
+        const x = (e.clientX ?? e.touches?.[0]?.clientX) - r.left;
+        const y = (e.clientY ?? e.touches?.[0]?.clientY) - r.top;
+        return {x,y};
+      }
+
+      canvas.addEventListener('pointerdown',(e)=>{drawing=true;lastPos=getPos(e);canvas.setPointerCapture(e.pointerId)});
+      canvas.addEventListener('pointermove',(e)=>{if(!drawing) return; const p=getPos(e); ctx.beginPath(); ctx.moveTo(lastPos.x,lastPos.y); ctx.lineTo(p.x,p.y); ctx.stroke(); lastPos=p;});
+      canvas.addEventListener('pointerup',(e)=>{drawing=false;lastPos=null});
+      canvas.addEventListener('pointercancel',()=>{drawing=false;lastPos=null});
+
+      document.getElementById('clearDraw').addEventListener('click', ()=>{ctx.clearRect(0,0,canvas.width,canvas.height)});
+
+      document.getElementById('submitDraw').addEventListener('click', ()=>{
+        // apply pop animation to canvas element and then proceed to stage 4
+        if(!canvas.classList.contains('pop-zoom')){
+          animateOnce(canvas,'pop-zoom', ()=>{
+            nextStage(4);
+          });
+        }
+      });
+    })();
+
+    // ------------------ Stage 4: Final page ------------------
+    (function setupStage4(){
+      const img = document.getElementById('finalImg');
+      const text = document.getElementById('finalText');
+      // when stage4 becomes active, start timer
+      const observer = new MutationObserver(muts=>{
+        muts.forEach(m=>{
+          if(m.attributeName==='class'){
+            const s4 = document.getElementById('stage4');
+            if(s4.classList.contains('active')){
+              // show final image then fade after 3s
+              setTimeout(()=>{
+                img.classList.add('fade-out');
+                // after fade completes (~1s) show text
+                setTimeout(()=>{
+                  img.style.display='none';
+                  text.style.display='block';
+                  setTimeout(()=>text.style.opacity=1,20);
+                },1000);
+              },3000);
+            }
+          }
+        });
+      });
+      observer.observe(document.getElementById('stage4'),{attributes:true});
+    })();
+
+    // Ensure stage transitions start hidden but stage0 visible on load
+    window.addEventListener('load', ()=>{
+      // minor accessibility: focus first button
+      document.getElementById('yesBtn').focus();
     });
+
+    // End of script
   </script>
 </body>
 </html>
